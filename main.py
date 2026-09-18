@@ -11,7 +11,8 @@ WIFI_RECONNECT_MS = 5000
 
 # Use the Flask computer's LAN IPv4 address, without http:// or a path.
 SERVER_HOST = "192.168.1.100"
-SERVER_PORT = 5000
+# mac os uses port 5000 for control center so use 5050, switch if need be
+SERVER_PORT = 5050
 SERVER_PATH = "/message"
 DEVICE_ID = "pico-w-01"
 HTTP_TIMEOUT_SECONDS = 5

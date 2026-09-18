@@ -99,4 +99,5 @@ app, socketio = create_app()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "5000")))
+    # port is 5050 instead of 5000 because mac os uses 5000 for airplay, switch this if needed
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "5050")))
