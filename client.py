@@ -56,12 +56,15 @@ def create_app(frontend_dir=None):
             # Serialize duplicate checks and emission for concurrent HTTP retries.
             with seen_lock:
                 if key in seen:
-                    logger.info("Duplicate event device_id=%s sequence=%s", *key)
+                    logger.info("Duplicate event device_id=%s location=%s sequence=%s",
+                                payload["device_id"], payload["location"], payload["sequence"])
                     return jsonify({"status": "duplicate"}), 200
                 payload["received_at"] = datetime.now(timezone.utc).isoformat()
                 socketio.emit("trap_triggered", payload)
                 seen.add(key)
-            logger.info("Received event: %s", payload)
+            logger.info("Accepted event device_id=%s location=%s sequence=%s received_at=%s",
+                        payload["device_id"], payload["location"],
+                        payload["sequence"], payload["received_at"])
             return jsonify({"status": "received", "event": payload}), 200
         except Exception:
             logger.exception("Failed to broadcast event device_id=%s sequence=%s", *key)

@@ -79,6 +79,28 @@ class FirmwareTests(unittest.TestCase):
         self.assertTrue(self.code['connect_wifi']())
         self.assertEqual(self.wlan.connect.call_count, 2)
 
+    def test_failed_send_recovers_and_led_patterns(self):
+        self.http.post.side_effect = ValueError('bad HTTP response')
+        self.assertFalse(self.code['send_event']('blinding', 'Armoury'))
+        self.assertEqual(self.http.post.call_count, 3)
+        # Solid while sending, then three failure flashes.
+        self.assertEqual(self.pins['LED'].on.call_count, 4)
+        self.pins['LED'].reset_mock()
+        self.http.post.side_effect = None
+        response = self.response(200)
+        response.close.side_effect = OSError('close failed')
+        self.http.post.return_value = response
+        self.assertTrue(self.code['send_event']('blinding', 'Storage'))
+        self.assertEqual(self.http.post.call_args.kwargs['json']['sequence'], 2)
+        self.assertEqual(self.pins['LED'].on.call_count, 2)
+        self.pins['LED'].off.assert_called()
+
+    def test_unsupported_http_timeout_returns_to_loop(self):
+        self.http.post.side_effect = TypeError('unexpected keyword timeout')
+        self.assertFalse(self.code['send_event']('blinding', 'Armoury'))
+        self.http.post.assert_called_once()
+        self.assertEqual(self.pins['LED'].on.call_count, 4)
+
     def test_debounce_hold_release_and_tick_wrap(self):
         button = self.code['Button'](14, 'Armoury')
         pin = self.pins[14]

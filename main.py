@@ -44,9 +44,20 @@ def connect_wifi():
             time.sleep_ms(100)
         print("Wi-Fi connected:", wlan.ifconfig()[0])
         return True
-    except OSError as error:
+    except Exception as error:
         print("Wi-Fi connection failed:", error)
         return False
+
+
+def show_send_result(success):
+    # One short flash: accepted. Three flashes: failed; ready for another press.
+    led.off()
+    time.sleep_ms(100)
+    for _ in range(1 if success else 3):
+        led.on()
+        time.sleep_ms(120)
+        led.off()
+        time.sleep_ms(120)
 
 
 def send_event(event, location):
@@ -59,6 +70,7 @@ def send_event(event, location):
         "sequence": sequence,
     }
     url = "http://{}:{}{}".format(SERVER_HOST, SERVER_PORT, SERVER_PATH)
+    success = False
     led.on()
     try:
         for attempt in range(HTTP_MAX_ATTEMPTS):
@@ -74,22 +86,30 @@ def send_event(event, location):
                     status = response.status_code
                     if 200 <= status < 300:
                         print("Event sent:", payload)
+                        success = True
                         return True
                     print("HTTP request failed:", status)
                     # Retrying a rejected payload will not fix it.
                     if 400 <= status < 500 and status not in (408, 429):
                         return False
-            except OSError as error:
+            except Exception as error:
                 print("HTTP attempt failed:", error)
+                # An incompatible HTTP library cannot be fixed by retrying.
+                if isinstance(error, TypeError):
+                    print("Check that urequests supports the timeout keyword")
+                    return False
             finally:
                 if response is not None:
-                    response.close()
+                    try:
+                        response.close()
+                    except Exception as error:
+                        print("HTTP response cleanup failed:", error)
             if attempt + 1 < HTTP_MAX_ATTEMPTS:
                 time.sleep_ms(HTTP_RETRY_MS)
         print("Event dropped after limited attempts:", payload)
         return False
     finally:
-        led.off()
+        show_send_result(success)
 
 
 class Button:

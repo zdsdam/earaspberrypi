@@ -1,5 +1,34 @@
 HOW TO USE
 
+## Live-event checks and simulator
+
+Start the Flask server, then in another terminal with `.venv` active run:
+
+```sh
+python tools/simulate_pico.py --location armoury
+```
+
+The simulator defaults to `http://127.0.0.1:5050/message`, matching the server's
+current default. Use `--url http://<laptop-LAN-IP>:5050/message` for another
+computer. Each invocation gets a unique device ID so repeat runs produce new
+events. To test duplicate suppression, run the same command twice with
+`--device-id test-pico --sequence 1`. Requests time out after five seconds and
+failures exit with a nonzero status. No additional dependencies are needed.
+
+The Pico LED stays on during sending, flashes once after success, and flashes
+three times after failure. Wi-Fi drops trigger bounded reconnect attempts.
+Malformed HTTP replies and response cleanup failures are logged without ending
+the button loop. Incompatible `urequests` timeout support produces a failure
+pattern and a diagnostic instead of crashing. Network calls and LED feedback
+are synchronous, so short presses during these operations can still be missed;
+there is no persistent event queue. Configure a numeric LAN IPv4 server address.
+
+Accepted-event logs include device ID, location, sequence, and UTC received time;
+duplicate events are logged separately. The frontend retains the latest ten
+events until page reload, shows the latest separately, and keeps its timer
+running while the server is disconnected. Events sent while a browser is
+disconnected are not replayed on reconnect.
+
 ## Run the complete system on a local LAN
 
 One-time online setup: install npm dependencies in the sibling frontend repo,

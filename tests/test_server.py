@@ -74,6 +74,15 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(response.json, {'status': 'ok'})
         self.assertEqual(self.socket.get_received(), [])
 
+    def test_accepted_and_duplicate_logging(self):
+        with self.assertLogs('client', level='INFO') as logs:
+            self.http.post('/message', json=self.payload)
+            self.http.post('/message', json=self.payload)
+        accepted = next(line for line in logs.output if 'Accepted event' in line)
+        for value in ('device_id=pico-w-01', 'location=Armoury', 'sequence=1', 'received_at='):
+            self.assertIn(value, accepted)
+        self.assertTrue(any('Duplicate event' in line for line in logs.output))
+
     def test_emit_failure_can_be_retried(self):
         with patch.object(self.socketio, 'emit', side_effect=RuntimeError('test failure')):
             with self.assertLogs('client', level='ERROR'):
