@@ -1,9 +1,10 @@
 HOW TO USE
 1. Install requirements
 
-Make sure Flask is installed:
+Activate the existing virtual environment and install the server dependencies:
 ```
-pip install flask flask-socketio
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
 2. Set up the Raspberry Pi Pico W
@@ -36,13 +37,28 @@ Use Pico W MicroPython firmware with a `urequests` module supporting the
 `timeout` keyword (current MicroPython requests implementation). Network calls
 are synchronous: short presses during connection attempts or HTTP requests can
 be missed. Failed events are logged and dropped; there is no persistent queue.
-Retries can deliver duplicates if the server processes a request but its reply
-is lost; sequence numbers allow a future server update to deduplicate them.
+The server accepts `trap_triggered` and the existing firmware's `blinding`
+alias, normalizing both to `trap_triggered`. Device ID and location must be
+non-empty strings; sequence must be a positive integer (not a boolean).
+Strings are trimmed and extra fields are ignored. Invalid or malformed JSON
+returns HTTP 400 without broadcasting.
 
-**Integration pending:** `client.py` is intentionally unchanged and still
-requires a `message` field. It will return HTTP 400 for these new structured
-events until the Flask server is updated. The manual request below still tests
-the existing server, but the new firmware cannot yet trigger the frontend.
+Accepted events receive a UTC ISO 8601 `received_at` timestamp and are broadcast
+as a Socket.IO `trap_triggered` event containing the four normalized fields plus
+the timestamp. HTTP 200 returns `{"status": "received", "event": {...}}`.
+Retries with the same normalized device ID and sequence return HTTP 200 with
+`{"status": "duplicate"}` and are not broadcast again. Broadcast failures return
+HTTP 500 and do not mark the event as processed, allowing a retry.
+
+Duplicate tracking is in memory for the lifetime of one server process; run a
+single process. The set grows with accepted events and clears on server restart.
+The Pico resets its sequence on reboot: restart the server or use a new device
+ID for that session to avoid collisions with previously accepted sequences.
+GET `/health` returns `{"status": "ok"}`. Standard Python logging records accepted
+and duplicate events, validation and broadcast errors, and Socket.IO connections.
+
+The React frontend still reads `data.message`; it needs a separate update to
+display these structured event fields. No legacy `message` field is emitted.
 
 3. Run the client.py on your computer
   1. Open Command Prompt in the project folder
@@ -57,8 +73,10 @@ If you can’t upload main.py or connect the Pico:
   1. Make sure client.py is already running.
   2. In a new Command Prompt window, send a test message:
      ```
-     curl -X POST http://127.0.0.1:5000/message -H "Content-Type: application/json" -d "{\"message\": \"Blinding: Armoury!\"}"
+     curl -X POST http://127.0.0.1:5000/message -H "Content-Type: application/json" -d '{"device_id":"pico-w-01","event":"trap_triggered","location":"Armoury","sequence":1}'
      ```
 
-   
-   
+5. Run host-side tests (no Pico hardware needed)
+```
+python -m unittest discover -s tests -v
+```
