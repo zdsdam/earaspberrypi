@@ -1,8 +1,10 @@
 import logging
+import os
 from datetime import datetime, timezone
 from threading import Lock
+from pathlib import Path
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_socketio import SocketIO
 
 
@@ -30,8 +32,9 @@ def normalize_event(data):
     return normalized
 
 
-def create_app():
-    app = Flask(__name__)
+def create_app(frontend_dir=None):
+    app = Flask(__name__, static_folder=None)
+    frontend = Path(frontend_dir or Path(__file__).parent / "frontend").resolve()
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
     seen = set()
     seen_lock = Lock()
@@ -72,6 +75,23 @@ def create_app():
     def on_disconnect(reason=None):
         logger.info("Socket.IO client disconnected: %s reason=%s", request.sid, reason)
 
+    @app.get("/")
+    @app.get("/<path:path>")
+    def serve_frontend(path=""):
+        # Never turn API mistakes or missing assets into successful HTML responses.
+        if path.split("/", 1)[0] in ("message", "health", "socket.io"):
+            abort(404)
+        candidate = (frontend / path).resolve()
+        if frontend not in candidate.parents and candidate != frontend:
+            abort(404)
+        if path and candidate.is_file():
+            return send_from_directory(frontend, path)
+        if path.startswith("assets/") or Path(path).suffix:
+            abort(404)
+        if not (frontend / "index.html").is_file():
+            return jsonify({"error": "Frontend missing; run copy_frontend.py after npm run build"}), 503
+        return send_from_directory(frontend, "index.html", max_age=0)
+
     return app, socketio
 
 
@@ -79,4 +99,4 @@ app, socketio = create_app()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    socketio.run(app, host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "5000")))

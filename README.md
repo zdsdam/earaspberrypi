@@ -1,4 +1,41 @@
 HOW TO USE
+
+## Run the complete system on a local LAN
+
+One-time online setup: install npm dependencies in the sibling frontend repo,
+and run `python3 -m venv .venv` followed by
+`.venv/bin/python -m pip install -r requirements.txt` in this repository.
+Then build and copy the site (commands from the parent workspace):
+
+```sh
+cd easound-main
+npm install
+npm run build
+python3 ../earaspberrypi-main/copy_frontend.py ./dist
+cd ../earaspberrypi-main
+source .venv/bin/activate
+python client.py
+```
+
+If your folders are named `easound` and `earaspberrypi`, use those names instead.
+The copy script also auto-detects either sibling name when run without arguments.
+It copies all build assets and MP3s into `frontend/`, which is generated locally
+and excluded from Git. Older hashed assets are retained for open browser tabs.
+Rerun the build and copy after changing the frontend.
+
+Open `http://<laptop-LAN-IP>:5000`. Flask serves the page, static files, audio,
+and Socket.IO on the same origin; no Vite process or internet is needed after
+setup. Extensionless SPA routes fall back to index.html. Missing files return
+404; a missing frontend build returns 503. `/health` and `POST /message` remain
+available. The frontend has no runtime CDN dependencies.
+
+Configure the Pico Wi-Fi credentials and set `SERVER_HOST` to the laptop's LAN
+IP and `SERVER_PORT` to 5000. Allow port 5000 through the laptop firewall and
+use a Wi-Fi network without client isolation. If port 5000 is occupied, free
+it (macOS AirPlay Receiver may use it) or run `PORT=5050 python client.py`
+and change the browser URL and Pico port to 5050. Audio may require a browser
+interaction such as clicking Start. Keep the server in the foreground.
+
 1. Install requirements
 
 Activate the existing virtual environment and install the server dependencies:
@@ -57,8 +94,8 @@ ID for that session to avoid collisions with previously accepted sequences.
 GET `/health` returns `{"status": "ok"}`. Standard Python logging records accepted
 and duplicate events, validation and broadcast errors, and Socket.IO connections.
 
-The React frontend still reads `data.message`; it needs a separate update to
-display these structured event fields. No legacy `message` field is emitted.
+The updated React frontend displays the structured location and timestamp.
+No legacy `message` field is emitted.
 
 3. Run the client.py on your computer
   1. Open Command Prompt in the project folder
@@ -66,7 +103,7 @@ display these structured event fields. No legacy `message` field is emitted.
      ```
      python client.py
      ```
-  3. Keep https://zdsdam.github.io/easound open in your browser.
+  3. Keep `http://<laptop-LAN-IP>:5000` open in your browser.
 
 4. If the Pico setup fails
 If you can’t upload main.py or connect the Pico:
