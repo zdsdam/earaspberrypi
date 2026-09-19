@@ -3,7 +3,7 @@ HOW TO USE
 ## Architecture
 
 Summary of architecture by Archify:
-![Architecture](architecture/runtime.visual-check.2048x1320.light.png "Architecture").
+/Users/zsa/Downloads/repos/easound_raspberrypi/architecture/runtime.visual-check.2048x1320.light.png
 
 ## Live-event checks and simulator
 
