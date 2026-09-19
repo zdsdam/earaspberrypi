@@ -1,5 +1,10 @@
 HOW TO USE
 
+## Architecture
+
+Summary of architecture by Archify:
+![Architecture](architecture/runtime.visual-check.2048x1320.light.png "Architecture").
+
 ## Live-event checks and simulator
 
 Start the Flask server, then in another terminal with `.venv` active run:
