@@ -3,7 +3,8 @@ HOW TO USE
 ## Architecture
 
 Summary of architecture by Archify:
-/Users/zsa/Downloads/repos/easound_raspberrypi/architecture/runtime.visual-check.2048x1320.light.png
+<img width="2048" height="1320" alt="image" src="https://github.com/user-attachments/assets/2941cb64-b7dd-4a47-8f16-3b90d366986b" />
+
 
 ## Live-event checks and simulator
 
